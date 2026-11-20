@@ -66,3 +66,7 @@ clang -mmacosx-version-min=13.0 -framework Carbon Packaging/activate.c -o build/
 The Swift sources in `TelexCore/` come from VietTelex commit `b9cf90de6df42438b80b5e3d7d2c00669c1bf1de`. When updating the engine, compare the upstream sources with the local copy, review the attribution notices and rerun the tests. TypeBlend’s contextual spelling logic lives in `Core/`. [Pinned upstream sources](https://github.com/ptrinh/VietTelex/tree/b9cf90de6df42438b80b5e3d7d2c00669c1bf1de/TelexCore/Sources/TelexCore) · [Engine license](TelexCore/LICENSE) · [Data sources](TelexCore/DATA-SOURCES.md) · [Third-party notices](Notices/)
 
 To retrain the experimental models, the scripts in `Tools/` expect Universal Dependencies r2.15 data in `../data` and an XLM-R checkpoint in `../xlmr`. Building the input method uses the model files already in the repository.
+
+## License
+
+TypeBlend's original code is licensed under the [MIT License](LICENSE). The bundled VietTelex engine includes its [upstream MIT license](TelexCore/LICENSE) and [data attributions](TelexCore/DATA-SOURCES.md). The model tables `ng.bin` and `student.bin` are distributed under CC BY-SA 4.0. See the [third-party notices](Notices/SOURCES.txt) for details.
