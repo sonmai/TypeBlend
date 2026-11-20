@@ -1,58 +1,68 @@
 # TypeBlend
 
-Bộ gõ Telex song ngữ cho macOS Apple Silicon. TypeBlend sử dụng ngữ cảnh khi chọn giữa chuỗi phím gốc và kết quả Telex. Dữ liệu mô hình chạy trên máy đã có trong Resources.
+TypeBlend is a Vietnamese–English Telex input method for Apple Silicon Macs. It lets you type both languages in the same sentence. When a sequence such as `gif` could mean either the English file format or the Vietnamese word *gì*, TypeBlend uses nearby words to choose a spelling. All typing and scoring stay on your Mac.
 
-## Kiến trúc bộ gõ
+## Architecture
 
-### Tổng quan hệ thống
+### System overview
 
-TypeBlend là bộ gõ chạy cục bộ trên Mac. Người dùng chọn TypeBlend làm nguồn nhập của macOS và tiếp tục soạn thảo trong ứng dụng như Notes hoặc Word. macOS kết nối ô nhập liệu với bộ gõ qua InputMethodKit. TypeBlend sở hữu phần xử lý Telex và chọn cách viết Anh–Việt theo ngữ cảnh. Dữ liệu cần để gõ nằm sẵn trong `TypeBlend.app`.
+TypeBlend runs as a macOS input source. Applications such as Notes and Word communicate with it through InputMethodKit. The app bundles the Telex engine and the model data it needs for typing.
 
-### Các thành phần bên trong TypeBlend.app
+### Components inside TypeBlend.app
 
-Các mũi tên biểu thị quan hệ phụ thuộc giữa các thành phần.
+Each arrow points from a component to a dependency it uses.
 
 ```mermaid
 flowchart TB
-    mac["InputMethodKit của macOS"]
+    mac["macOS InputMethodKit"]
     subgraph bundle["TypeBlend.app"]
         adapter["App · TypeBlendController"]
-        subgraph core["Core · lõi TypeBlend"]
-            session["Session · quản lý phiên gõ"]
-            ranker["Ranker · chọn cách viết"]
+        subgraph core["TypeBlend core"]
+            session["Session · composition state"]
+            ranker["Ranker · spelling selection"]
         end
-        telex["TelexCore · thư viện từ VietTelex"]
-        assets["Resources · dữ liệu mô hình"]
+        telex["TelexCore · upstream VietTelex engine"]
+        assets["Resources · bundled model data"]
     end
-    adapter -->|tích hợp với| mac
-    adapter -->|sở hữu| session
-    session -->|tạo ứng viên tiếng Việt| telex
-    session -->|ủy quyền chọn từ| ranker
-    ranker -->|đọc| assets
+    adapter -->|integrates with| mac
+    adapter -->|owns| session
+    session -->|obtains Telex spelling from| telex
+    session -->|delegates spelling selection to| ranker
+    ranker -->|loads| assets
 ```
 
-`TypeBlendController` chịu trách nhiệm hiển thị chữ đang soạn và chèn chữ đã chốt vào ứng dụng. `Session` giữ chuỗi phím gốc, từ đang soạn, ngữ cảnh và lựa chọn sửa tay. Nhờ ranh giới này, có thể kiểm thử cùng một lõi chọn từ bằng cách phát lại chuỗi phím mà không phải mở Notes. [Tích hợp macOS](App/main.swift) · [Phiên gõ](Core/Session.swift) · [Kiểm thử phát lại](Tests/main.swift)
+`TypeBlendController` displays marked text and commits the final spelling to the host application. `Session` tracks the original keystrokes, the word being composed, nearby words and manual corrections. The replay tests exercise this same session logic one keystroke at a time. [macOS integration](App/main.swift) · [Session state](Core/Session.swift) · [Replay tests](Tests/main.swift)
 
-### Chi tiết bộ chọn từ và dữ liệu mô hình
+### Spelling selection and model data
 
-`Ranker` nhận chuỗi phím gốc, kết quả Telex và các từ lân cận từ `Session`. Bản phát hành mặc định sử dụng các thành phần sau.
+The ranker receives the raw keystrokes, the Telex spelling and the available context. The default build uses the following resources.
 
-| Thành phần | Dữ liệu đóng gói | Trách nhiệm |
+| Component | Bundled data | Responsibility |
 |---|---|---|
-| Danh sách cặp nhập nhằng | `collisions.txt` và danh sách trong `model.json` | Xác định những chuỗi phím mà bộ chọn hỗ trợ. |
-| Bộ chấm điểm n-gram trong `Ranker` | `ng.bin`, `ng-tags.bin` | Tra điểm của các cụm từ lân cận và kiểm tra dấu nhận dạng của mục tra cứu. Khi bằng chứng yếu, dùng kết quả mặc định của lõi Telex. |
-| `SeedRanker` | `model.json` | Chấm điểm riêng cho hai cặp `gif/gì` và `max/mã`. |
+| Supported spelling pairs | `collisions.txt` and entries in `model.json` | Identify keystroke sequences eligible for contextual scoring. |
+| N-gram scorer | `ng.bin`, `ng-tags.bin` | Look up scores for nearby word combinations and verify the lookup tags. Use the Telex engine’s default spelling when the evidence is weak. |
+| SeedRanker | `model.json` | Score the two pairs `gif/gì` and `max/mã` with a dedicated model. |
 
-Các công cụ Python trong `Tools/` tạo dữ liệu cho bản build. XLM-R được dùng để huấn luyện mô hình thử nghiệm trên máy phát triển. Bộ gõ phát hành chỉ nạp các tài nguyên cục bộ liệt kê ở trên. [Ranker](Core/Context.swift) · [SeedRanker](Core/Ranker.swift) · [Huấn luyện](Tools/fit_context.py) · [Đóng gói](build.sh)
+The Python tools generate model data offline. XLM-R is used during experimental training. The shipping input method uses the bundled resources listed above. [Ranker](Core/Context.swift) · [SeedRanker](Core/Ranker.swift) · [Training](Tools/fit_context.py) · [Build script](build.sh)
 
-## Build và kiểm thử
+## Build and test
 
-Trên Mac có Xcode Command Line Tools, chạy `./test.sh` và `./build.sh`. Kết quả nằm ở `build/TypeBlend.app`.
+On an Apple Silicon Mac with Xcode Command Line Tools installed, run these commands from the repository root.
 
-Để tạo thư mục cập nhật, chép `Packaging/Update.command` vào `build/` và chạy `clang -mmacosx-version-min=13.0 -framework Carbon Packaging/activate.c -o build/activate`. Bản build dùng chữ ký ad hoc.
+```sh
+./test.sh
+./build.sh
+```
 
-## Cập nhật VietTelex
+The build produces an ad hoc signed app at `build/TypeBlend.app`. To include the updater and input-source activation helper in the same directory, run:
 
-Các tệp Swift trong TelexCore được lấy nguyên bản từ [ptrinh/VietTelex](https://github.com/ptrinh/VietTelex/tree/b9cf90de6df42438b80b5e3d7d2c00669c1bf1de/TelexCore/Sources/TelexCore) tại commit `b9cf90de6df42438b80b5e3d7d2c00669c1bf1de`. Khi nâng phiên bản, so sánh thư mục upstream đó với TelexCore, rà soát ghi công và chạy lại bộ kiểm thử. Mã chọn từ của TypeBlend nằm ở Core.
+```sh
+cp Packaging/Update.command build/
+clang -mmacosx-version-min=13.0 -framework Carbon Packaging/activate.c -o build/activate
+```
 
-Xem TelexCore/LICENSE, TelexCore/DATA-SOURCES.md và Notices/ cho mã và dữ liệu bên thứ ba. Các script huấn luyện thử nghiệm trong Tools sử dụng dữ liệu UD r2.15 ở ../data và checkpoint XLM-R ở ../xlmr. Các dữ liệu đầu vào này chỉ cần khi huấn luyện lại.
+## Updating the VietTelex engine
+
+The Swift sources in `TelexCore/` come from VietTelex commit `b9cf90de6df42438b80b5e3d7d2c00669c1bf1de`. When updating the engine, compare the upstream sources with the local copy, review the attribution notices and rerun the tests. TypeBlend’s contextual spelling logic lives in `Core/`. [Pinned upstream sources](https://github.com/ptrinh/VietTelex/tree/b9cf90de6df42438b80b5e3d7d2c00669c1bf1de/TelexCore/Sources/TelexCore) · [Engine license](TelexCore/LICENSE) · [Data sources](TelexCore/DATA-SOURCES.md) · [Third-party notices](Notices/)
+
+To retrain the experimental models, the scripts in `Tools/` expect Universal Dependencies r2.15 data in `../data` and an XLM-R checkpoint in `../xlmr`. Building the input method uses the model files already in the repository.
