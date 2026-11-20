@@ -1,4 +1,4 @@
-SongNgu 0.2.0 uses unmodified TelexCore sources and a seed training corpus from ptrinh/VietTelex, revision b9cf90de6df42438b80b5e3d7d2c00669c1bf1de. See LICENSE and DATA-SOURCES.md for code and frequency-table attribution.
+TypeBlend uses unmodified TelexCore sources and a seed training corpus from ptrinh/VietTelex, revision b9cf90de6df42438b80b5e3d7d2c00669c1bf1de. See LICENSE and DATA-SOURCES.md for code and frequency-table attribution.
 For the new model tables, training and tuning used UD English EWT and UD Vietnamese VTB release r2.15. Credits, contributors and original data:
 https://github.com/UniversalDependencies/UD_English-EWT/tree/r2.15
 https://github.com/UniversalDependencies/UD_Vietnamese-VTB/tree/r2.15
