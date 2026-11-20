@@ -27,3 +27,28 @@ let commit = s.finish()
 update(commit)
 print(v.string)
 guard v.string == "📌 Gửi mình file gif nhé. Bạn vừa gửi mình file gì vậy? sau", !v.hasMarkedText() else { exit(1) }
+
+var inline = InlineComposition()
+v.string = "📌 [chèn] sau"
+v.setSelectedRange((v.string as NSString).range(of: "[chèn]"))
+s = Session(model)
+func inlineUpdate(_ committed: String) {
+    inline.display(committed: committed, composing: s.marked, selection: v.selectedRange()) {
+        v.insertText($0, replacementRange: $1)
+    }
+    precondition(!v.hasMarkedText())
+    precondition(inline.matches(v.selectedRange()) { (v.string as NSString).substring(with: $0) })
+}
+for c in "Guwir minhf file gif nhes. Banj vuwaf guwir minhf file gif vaayj?" {
+    if c.isLetter { s.type(c); inlineUpdate("") }
+    else { let commit = s.boundary(String(c)); inlineUpdate(commit) }
+}
+inlineUpdate(s.finish())
+precondition(v.string == "📌 Gửi mình file gif nhé. Bạn vừa gửi mình file gì vậy? sau")
+for c in "of" { s.type(c); inlineUpdate("") }
+precondition(s.toggle())
+inlineUpdate("")
+precondition(s.backspace())
+inlineUpdate("")
+v.setSelectedRange(NSRange(location: 0, length: 0))
+precondition(!inline.matches(v.selectedRange()) { _ in nil })

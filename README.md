@@ -31,7 +31,7 @@ flowchart TB
     ranker -->|loads| assets
 ```
 
-`TypeBlendController` displays marked text and commits the final spelling to the host application. `Session` tracks the original keystrokes, the word being composed, nearby words and manual corrections. The replay tests exercise this same session logic one keystroke at a time. [macOS integration](App/main.swift) · [Session state](Core/Session.swift) · [Replay tests](Tests/main.swift)
+`TypeBlendController` inserts ordinary text in Apple Notes and the ChatGPT desktop app so that the current word has no composition underline. Before revising a spelling, it checks that the caret and previously inserted text still match. Other editors use the InputMethodKit marked-text path. `Session` tracks the original keystrokes, the word being composed, nearby words and manual corrections. The replay tests exercise this same session logic one keystroke at a time. [macOS integration](App/main.swift) · [Session state](Core/Session.swift) · [Replay tests](Tests/main.swift)
 
 ### Spelling selection and model data
 
