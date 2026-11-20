@@ -1,0 +1,69 @@
+gif|1|xuất ảnh động sang file @ nhé
+gif|1|đính kèm file @ vào mail
+gif|1|gửi ảnh @ cho khách
+gif|1|lưu dưới định dạng @
+gif|1|chuyển video thành @
+gif|1|tải file @ lên
+gif|1|xin cái @ động
+gif|0|biết file @ vậy
+gif|0|đó là file @ thế
+gif|0|bạn cần @ nữa
+gif|0|đang làm @ đó
+gif|0|muốn hỏi @ đây
+gif|0|tệp này chứa @
+gif|0|em vừa gửi @ vậy
+max|1|cấu hình giới hạn đặt @ là
+max|1|upload xong đặt @ cho server
+max|1|giới hạn upload đặt @ là
+max|1|chọn giá trị @ cho biến
+max|1|set @ connections
+max|1|đặt @ bằng
+max|1|đổi @ thành
+max|1|min và @
+max|0|tạo @ truy cập
+max|0|điền @ bảo mật
+max|0|nhập @ xác nhận
+max|0|nhập @ mới
+max|0|nhận otp rồi đặt @ là
+max|0|bảo mật yêu cầu đặt @ là
+max|0|đổi mật khẩu rồi đặt @ là
+max|0|mã truy cập hãy đặt @ là
+gif|1|file @
+gif|1|cái file @
+gif|1|file @ đẹp
+gif|1|thêm file @
+gif|1|file @ này
+gif|0|file @ vậy
+gif|0|file @ thế
+car|1|rent a @ today
+car|1|xe trong game là sports @
+car|0|tất @ mọi người
+car|0|em gửi @ nhóm
+bar|1|mở menu @ trên mac
+bar|1|thêm progress @ vào dashboard
+bar|0|hôm nay @ đi đâu
+bar|0|má nói @ về
+bus|1|service @ xử lý event
+bus|1|bắt xe @ về nhà
+bus|0|cho bé @ sữa
+bus|0|con đang @ mẹ
+now|1|do it @ please
+now|1|click buy @ here
+now|0|thắt cái @ đỏ
+now|0|buộc một chiếc @
+last|1|xem @ commit
+last|1|the @ day
+last|0|chờ một @ nhé
+last|0|cắt từng @ mỏng
+own|1|on my @ today
+own|1|write your @ code
+own|0|cảm @ bạn
+own|0|biết @ thầy
+its|1|check @ status
+its|1|review @ settings
+its|0|còn rất @ thời gian
+its|0|làm @ thôi
+as|1|save @ pdf
+as|1|run @ admin
+as|0|đông nam @ phát triển
+as|0|châu @ có nhiều nước

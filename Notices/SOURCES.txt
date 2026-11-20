@@ -1,0 +1,6 @@
+SongNgu 0.2.0 uses unmodified TelexCore sources and a seed training corpus from ptrinh/VietTelex, revision b9cf90de6df42438b80b5e3d7d2c00669c1bf1de. See LICENSE and DATA-SOURCES.md for code and frequency-table attribution.
+For the new model tables, training and tuning used UD English EWT and UD Vietnamese VTB release r2.15. Credits, contributors and original data:
+https://github.com/UniversalDependencies/UD_English-EWT/tree/r2.15
+https://github.com/UniversalDependencies/UD_Vietnamese-VTB/tree/r2.15
+Tables ng.bin and student.bin are distributed under CC BY-SA 4.0. Copies of the treebanks' notices are included. Original sentences from these treebanks are not distributed here.
+The experimental student also uses soft labels from a frozen FacebookAI/xlm-roberta-base encoder with a supervised linear head. Teacher weights are not included.

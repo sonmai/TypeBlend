@@ -1,0 +1,24 @@
+gif|1|sếp muốn đính kèm ảnh @ nhé
+gif|0|designer export kiểu file @ vậy
+gif|0|em hỏi khách cần @ thêm
+gif|1|đổi animation sang @ cho nhẹ
+max|1|upload có giới hạn thử đặt @ là năm
+max|0|hệ thống cần nhập @ đăng nhập
+max|0|bên kho đang dò @ vận đơn
+max|1|thử chỉnh @ connections trong config
+bar|1|đổi màu progress @ trên web
+bar|0|nghe nói @ làm dự án này
+car|1|mình chọn mục rent a @ hôm qua
+car|0|review xong @ ba trang
+own|0|công ty biết @ anh
+own|1|nhắc khách bring your @ device
+now|1|nút apply @ hiển thị sai
+now|0|mẫu này có chiếc @ xanh
+last|1|sort theo @ name trước
+last|0|đợi một @ rồi deploy
+bus|1|thử event @ sau khi deploy
+bus|0|bé đòi @ nên em offline
+its|1|module tracks @ changes tự động
+its|0|log còn khá @ thông tin
+is|1|kiểm tra flag @ enabled
+of|1|bản proof @ concept mới
