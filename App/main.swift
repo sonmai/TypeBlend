@@ -12,7 +12,7 @@ class TypeBlendController: IMKInputController {
         if !committed.isEmpty { client.insertText(committed, replacementRange: noRange) }
         let text = session.marked
         if !text.isEmpty || (committed.isEmpty && client.markedRange().location != NSNotFound) {
-            client.setMarkedText(text, selectionRange: NSRange(location: text.utf16.count, length: 0), replacementRange: noRange)
+            client.setMarkedText(markedTextForDisplay(text), selectionRange: NSRange(location: text.utf16.count, length: 0), replacementRange: noRange)
         }
     }
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {

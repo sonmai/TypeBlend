@@ -8,7 +8,13 @@ func update(_ commit: String) {
     if !commit.isEmpty { v.insertText(commit,replacementRange:none) }
     let text = s.marked
     if !text.isEmpty || (commit.isEmpty && v.hasMarkedText()) {
-        v.setMarkedText(text,selectedRange:NSRange(location:text.utf16.count,length:0),replacementRange:none)
+        let marked = markedTextForDisplay(text)
+        if marked.length > 0 {
+            marked.enumerateAttribute(.underlineStyle, in: NSRange(location: 0, length: marked.length)) { style, _, _ in
+                precondition((style as? NSNumber)?.intValue == 0)
+            }
+        }
+        v.setMarkedText(marked, selectedRange:NSRange(location:text.utf16.count,length:0),replacementRange:none)
     }
 }
 v.string = "📌 [chèn] sau"
