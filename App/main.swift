@@ -8,6 +8,7 @@ let model = try Ranker(Bundle.main.resourceURL!)
 @objc(TypeBlendController)
 class TypeBlendController: IMKInputController {
     private var session = Session(model)
+    private var recentCaret: NSRange?
     private var inline = InlineComposition()
 
     private func synchronize(_ client: IMKTextInput) {
@@ -37,7 +38,25 @@ class TypeBlendController: IMKInputController {
         guard let event, event.type == .keyDown, let client = sender as? IMKTextInput else { return false }
         synchronize(client)
         let flags = event.modifierFlags.intersection([.command, .option, .control])
-        if flags == .control, event.charactersIgnoringModifiers == ";", session.toggle() { display(client); return true }
+        let pin = flags == [.control, .option]
+        if (flags == .control || pin), event.keyCode == 41 || event.charactersIgnoringModifiers == ";" {
+            if pin ? session.pinCurrent() : session.toggle() {
+                display(client)
+                return true
+            }
+            if let recent = session.recent, pin || recent.raw != recent.composed {
+                let selection = client.selectedRange()
+                if let range = recent.range(at: selection, expectedCaret: recentCaret,
+                                            read: { client.attributedSubstring(from: $0)?.string }) {
+                    session.correctRecent(pin: pin)
+                    if let corrected = session.recent, corrected.choice != recent.choice {
+                        client.insertText(corrected.choice + corrected.separator, replacementRange: range)
+                    }
+                    recentCaret = client.selectedRange()
+                    return true
+                }
+            }
+        }
         if !flags.isEmpty { commitComposition(sender); return false }
         if event.keyCode == 51 {
             guard session.backspace() else { return false }
@@ -51,7 +70,11 @@ class TypeBlendController: IMKInputController {
         }
         session.lookahead = !["com.apple.Terminal", "com.googlecode.iterm2", "com.microsoft.VSCode"].contains(client.bundleIdentifier() ?? "")
         if c.isLetter { session.type(c); display(client) }
-        else { let output = session.boundary(String(c)); display(client, committed: output) }
+        else {
+            let output = session.boundary(String(c))
+            display(client, committed: output)
+            recentCaret = session.recent == nil ? nil : client.selectedRange()
+        }
         return true
     }
     override func commitComposition(_ sender: Any!) {

@@ -1,23 +1,19 @@
 import Foundation
 
-// Keep proper names stable through partial composition and word boundaries.
-private enum LiteralNames {
-    static let words = Set(["zara"] + (UserDefaults.standard.stringArray(forKey: "LiteralNames") ?? []).map { $0.lowercased() })
-    static let prefixes = Set(words.flatMap { word in word.indices.map { String(word[...$0]) } })
-}
-
 private struct Word {
     var raw = ""
     var engine = TelexEngine()
     var forced: String?
+    var explicitCorrection = false
     var correctedRaw: String?
     init() { engine.liveSpellCheck = true }
-    var live: String { forced ?? (LiteralNames.prefixes.contains(raw.lowercased()) ? raw : engine.composed) }
-    mutating func add(_ c: Character) {
+    var live: String { forced ?? engine.composed }
+    mutating func add(_ c: Character, preferences: TypingPreferences) {
         forced = nil
+        explicitCorrection = false
         raw.append(c)
         _ = engine.feed(c)
-        if raw == correctedRaw { forced = live }
+        if raw == correctedRaw { forced = preferences.prefix(raw) ? raw : live }
     }
     var normal: String {
         var copy = engine
@@ -32,14 +28,61 @@ struct Session {
     private var pending: Word?
     private var pendingChoice = ""
     private var history: [String] = []
-    init(_ model: Ranker) { self.model = model }
-    var marked: String { (pending == nil ? "" : pendingChoice + " ") + word.live }
+    private let preferences: TypingPreferences
+    private var live: String { word.forced ?? (preferences.prefix(word.raw) ? word.raw : word.live) }
+    struct Recent {
+        let raw, composed, separator: String
+        let key: String?
+        var choice: String
+        var corrected: Bool
+        func range(at selection: NSRange, expectedCaret: NSRange?, read: (NSRange) -> String?) -> NSRange? {
+            let expected = choice + separator
+            let length = expected.utf16.count
+            guard selection == expectedCaret, selection.length == 0, selection.location != NSNotFound,
+                  selection.location >= length else { return nil }
+            let range = NSRange(location: selection.location - length, length: length)
+            return read(range)?.utf16.elementsEqual(expected.utf16) == true ? range : nil
+        }
+    }
+    private(set) var recent: Recent?
+    init(_ model: Ranker, preferences: TypingPreferences = .shared) {
+        self.model = model
+        self.preferences = preferences
+    }
+    private func contextKey(_ raw: String) -> String? {
+        guard !history.isEmpty else { return nil }
+        return history.suffix(2).joined(separator: " ").lowercased() + "|" + raw.lowercased()
+    }
+    private mutating func finishRecent() {
+        if let r = recent, r.corrected { preferences.record(r.key, raw: r.choice == r.raw) }
+        recent = nil
+    }
+    mutating func correctRecent(pin: Bool) {
+        guard var r = recent else { return }
+        if pin { preferences.pin(r.raw) }
+        r.choice = pin || r.choice != r.raw ? r.raw : r.composed
+        r.corrected = !pin
+        recent = r
+        if !history.isEmpty { history[history.count - 1] = r.choice }
+    }
+    mutating func pinCurrent() -> Bool {
+        if !word.raw.isEmpty { preferences.pin(word.raw); word.forced = word.raw; return true }
+        if var p = pending {
+            preferences.pin(p.raw); p.forced = p.raw; pending = p; pendingChoice = p.raw
+            return true
+        }
+        return false
+    }
+    var marked: String { (pending == nil ? "" : pendingChoice + " ") + live }
     var active: Bool { pending != nil || !word.raw.isEmpty }
-    mutating func type(_ c: Character) { word.add(c) }
+    mutating func type(_ c: Character) { finishRecent(); word.add(c, preferences: preferences) }
 
     private func choose(_ w: Word, next: String = "") -> String {
         if let forced = w.forced { return forced }
-        if LiteralNames.words.contains(w.raw.lowercased()) { return w.raw }
+        if preferences.literal(w.raw) { return w.raw }
+        if w.raw != w.engine.composed, let raw = preferences.preference(contextKey(w.raw)) {
+            return raw ? w.raw : w.engine.composed
+        }
         return model.choose(raw: w.raw, composed: w.engine.composed, fallback: w.normal,
                                  left: history, next: next)
     }
@@ -50,11 +93,13 @@ struct Session {
     private mutating func settlePending() -> String {
         guard let p = pending else { return "" }
         let text = choose(p, next: word.normal)
+        if p.explicitCorrection { preferences.record(contextKey(p.raw), raw: text == p.raw) }
         pending = nil
         remember(text)
         return text + " "
     }
     mutating func boundary(_ separator: String) -> String {
+        finishRecent()
         var result = settlePending()
         let text = choose(word)
         if separator == " ", lookahead, model.supported.contains(word.raw.lowercased()),
@@ -62,6 +107,10 @@ struct Session {
             pending = word
             pendingChoice = text
         } else {
+            if !separator.isEmpty, !word.raw.isEmpty {
+                recent = Recent(raw: word.raw, composed: word.engine.composed, separator: separator,
+                                key: contextKey(word.raw), choice: text, corrected: word.explicitCorrection)
+            } else if word.explicitCorrection { preferences.record(contextKey(word.raw), raw: text == word.raw) }
             remember(text)
             result += text + separator
         }
@@ -69,14 +118,14 @@ struct Session {
         return result
     }
     mutating func finish() -> String { boundary("") }
-    mutating func forget() { history.removeAll() }
+    mutating func forget() { finishRecent(); history.removeAll() }
     mutating func backspace() -> Bool {
         if !word.raw.isEmpty {
             let original = word.correctedRaw ?? word.raw
             let rest = word.raw.dropLast()
             word = Word()
             word.correctedRaw = original
-            for c in rest { word.add(c) }
+            for c in rest { word.add(c, preferences: preferences) }
         } else if let p = pending {
             word = p
             word.forced = p.forced ?? p.engine.composed
@@ -88,12 +137,14 @@ struct Session {
     mutating func toggle() -> Bool {
         if word.raw.isEmpty, var p = pending {
             pendingChoice = pendingChoice == p.raw ? p.engine.composed : p.raw
+            p.explicitCorrection = true
             p.forced = pendingChoice
             pending = p
             return true
         }
         guard word.raw != word.engine.composed else { return false }
-        word.forced = word.live == word.raw ? word.engine.composed : word.raw
+        word.explicitCorrection = true
+        word.forced = live == word.raw ? word.engine.composed : word.raw
         return true
     }
 }

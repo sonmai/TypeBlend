@@ -3,7 +3,10 @@ let app = NSApplication.shared
 let v = NSTextView(frame: NSRect(x:0,y:0,width:600,height:200))
 let model = try Ranker(URL(fileURLWithPath: CommandLine.arguments[1]))
 let none = NSRange(location:NSNotFound,length:0)
-var s = Session(model)
+let suite = "TypeBlendAppKit-" + UUID().uuidString
+let defaults = UserDefaults(suiteName: suite)!
+let prefs = TypingPreferences(defaults)
+var s = Session(model, preferences: prefs)
 func update(_ commit: String) {
     if !commit.isEmpty { v.insertText(commit,replacementRange:none) }
     let text = s.marked
@@ -31,7 +34,7 @@ guard v.string == "📌 Gửi mình file gif nhé. Bạn vừa gửi mình file 
 var inline = InlineComposition()
 v.string = "📌 [chèn] sau"
 v.setSelectedRange((v.string as NSString).range(of: "[chèn]"))
-s = Session(model)
+s = Session(model, preferences: prefs)
 func inlineUpdate(_ committed: String) {
     inline.display(committed: committed, composing: s.marked, selection: v.selectedRange()) {
         v.insertText($0, replacementRange: $1)
@@ -52,3 +55,19 @@ precondition(s.backspace())
 inlineUpdate("")
 v.setSelectedRange(NSRange(location: 0, length: 0))
 precondition(!inline.matches(v.selectedRange()) { _ in nil })
+
+// Replace only our last committed word and separator, after a UTF-16 surrogate pair.
+s = Session(model, preferences: prefs)
+s.lookahead = false
+v.string = "📌 "
+v.setSelectedRange(NSRange(location: v.string.utf16.count, length: 0))
+for c in "gif" { s.type(c) }
+v.insertText(s.boundary(" "), replacementRange: none)
+let caret = v.selectedRange()
+let recent = s.recent!
+let target = recent.range(at: caret, expectedCaret: caret) { (v.string as NSString).substring(with: $0) }!
+s.correctRecent(pin: false)
+v.insertText(s.recent!.choice + " ", replacementRange: target)
+precondition(v.string == "📌 " + (recent.choice == "gif" ? "gì " : "gif "))
+precondition(!v.hasMarkedText() && v.selectedRange().location == v.string.utf16.count)
+defaults.removePersistentDomain(forName: suite)

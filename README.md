@@ -2,6 +2,12 @@
 
 TypeBlend is a Vietnamese–English Telex input method for Apple Silicon Macs. It lets you type both languages in the same sentence. When a sequence such as `gif` could mean either the English file format or the Vietnamese word *gì*, TypeBlend uses nearby words to choose a spelling. All typing and scoring stay on your Mac.
 
+## Bilingual typing shortcuts
+
+- Press **Control + ;** to switch the spelling of the current word (for example, `gif` ↔ `gì`). You can also switch the last word immediately after a space or punctuation. For committed text, the editor must report the same caret and text before TypeBlend will replace it.
+- Press **Control + Option + ;** while typing a name, or immediately after it, to keep its original spelling on this Mac. Capitalization follows your keystrokes.
+- Two consistent manual corrections in the same preceding word context teach a local preference. TypeBlend stores the spelling choice and up to two preceding words in macOS preferences. The English phrase list also recognizes mixed-language expressions such as `out of office`. All lookups run on device.
+
 ## Install or update
 
 On an Apple Silicon Mac running macOS 13 or later, open the [latest TypeBlend.pkg](https://github.com/sonmai/TypeBlend/releases/latest/download/TypeBlend.pkg) and install it for your user account. The installer upgrades the existing `~/Library/Input Methods/TypeBlend.app` in place. Sign out and back in to load the new build. On first install, add TypeBlend under System Settings → Keyboard → Input Sources → Vietnamese.

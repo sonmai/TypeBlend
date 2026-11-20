@@ -3,11 +3,14 @@ import Foundation
 struct Ranker {
     enum Mode: String, CaseIterable { case seed, ngram, student, cascade }
     let seed: SeedRanker
+    let englishPhrases: Set<String>
     let supported: Set<String>
     let counts, learned, tags: Data
     let mode: Mode
     init(_ directory: URL, mode: Mode = .ngram) throws {
         self.mode = mode
+        englishPhrases = Set(try String(contentsOf: directory.appendingPathComponent("english-phrases.txt"),
+                                        encoding: .utf8).split(separator: "\n").map(String.init))
         func bytes(_ file: String) throws -> Data {
             try Data(contentsOf: directory.appendingPathComponent(file), options: .mappedIfSafe)
         }
@@ -23,6 +26,12 @@ struct Ranker {
     func choose(raw: String, composed: String, fallback: String, left: [String], next: String) -> String {
         let word = raw.lowercased()
         guard raw != composed, raw != raw.uppercased(), supported.contains(word) else { return fallback }
+        if mode == .ngram {
+            let previous = left.suffix(2).map { $0.lowercased() }
+            if previous.count == 2, englishPhrases.contains((previous + [word]).joined(separator: " ")) { return raw }
+            if let last = previous.last, !next.isEmpty,
+               englishPhrases.contains([last, word, next.lowercased()].joined(separator: " ")) { return raw }
+        }
         if mode == .seed || seed.supported.contains(word) && ["gif","max"].contains(word) {
             return seed.choose(raw: raw, composed: composed, fallback: fallback, left: left, next: next)
         }
