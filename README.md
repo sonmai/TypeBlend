@@ -4,26 +4,42 @@ Bộ gõ Telex song ngữ cho macOS Apple Silicon. SongNgu sử dụng ngữ c�
 
 ## Kiến trúc bộ gõ
 
-Mỗi lần nhấn phím, `SongNguController` nhận sự kiện từ InputMethodKit. `Session` giữ chuỗi phím gốc và dùng `TelexEngine` để cập nhật chữ đang hiện trong ứng dụng. Khi gặp ranh giới từ, bộ gõ chọn cách viết theo luồng dưới đây.
+SongNgu chạy trên Mac dưới dạng một ứng dụng bộ gõ dùng InputMethodKit. Sơ đồ thể hiện các thành phần của bản phát hành mặc định. Mũi tên hướng từ thành phần sử dụng đến thành phần mà nó phụ thuộc.
 
 ```mermaid
-flowchart TD
-    controller["SongNguController · nhận phím"] --> session["Session · giữ phím gốc"]
-    session --> engine["TelexEngine · tạo chữ có dấu"]
-    engine --> display["Hiển thị chữ đang soạn"]
-    session -->|Kết thúc từ| choice{"Đã sửa tay hoặc là tên cần giữ?"}
-    choice -->|Có| keep["Giữ lựa chọn của người gõ hoặc tên gốc"]
-    choice -->|Chưa| ranker{"Ranker có xử lý cặp này?"}
-    ranker -->|Không| fallback["Dùng kết quả mặc định của TelexEngine"]
-    ranker -->|Có| context["So sánh hai cách viết theo ngữ cảnh"]
-    keep --> commit["Chốt chữ vào ứng dụng"]
-    fallback --> commit
-    context --> commit
+flowchart TB
+    host["Ứng dụng nhập văn bản · Notes, Word"]
+    imk["InputMethodKit · macOS"]
+    subgraph bundle["SongNgu.app"]
+        subgraph adapter["App · tích hợp macOS"]
+            controller["SongNguController"]
+        end
+        subgraph core["Core · mã của SongNgu"]
+            session["Session · trạng thái phiên gõ"]
+            ranker["Ranker · chọn cách viết"]
+            seed["SeedRanker · mô hình cho gif và max"]
+        end
+        subgraph upstream["TelexCore · mã từ VietTelex"]
+            telex["TelexEngine · quy tắc Telex"]
+        end
+        subgraph assets["Resources · dữ liệu đóng gói"]
+            tables["Bảng n-gram và danh sách cặp từ"]
+            weights["model.json · trọng số SeedRanker"]
+        end
+    end
+    host ---|giao thức nhập văn bản| imk
+    controller -->|kế thừa IMKInputController| imk
+    controller -->|sở hữu phiên gõ| session
+    session -->|dùng cho từng từ| telex
+    session -->|ủy quyền chọn từ| ranker
+    ranker -->|tra cứu| tables
+    ranker -->|dùng cho hai cặp đặc thù| seed
+    ranker -->|nạp trọng số| weights
 ```
 
-Ví dụ, chuỗi `gif` có thể cho ra **gif** trong “gửi mình file gif nhé” hoặc **gì** trong “bạn gửi mình file gì vậy?”. Khi ứng dụng hỗ trợ và người dùng vừa gõ dấu cách, `Session` có thể giữ từ nhập nhằng trong vùng đang soạn thêm một từ để xét ngữ cảnh bên phải trước khi chốt. Lựa chọn sửa tay được ưu tiên khi xét lại.
-
-Bản macOS mặc định dùng bảng n-gram cục bộ cho các cặp được hỗ trợ. Hai cặp `gif/gì` và `max/mã` dùng bộ chọn riêng. XLM-R chỉ tham gia các thí nghiệm huấn luyện. [Luồng nhập liệu](App/main.swift) · [Trạng thái phiên gõ](Core/Session.swift) · [Bộ chọn từ](Core/Context.swift)
+- **Tích hợp macOS.** `SongNguController` quản lý giao tiếp với ô nhập liệu qua `IMKTextInput`. Phần hiển thị chữ đang soạn và chèn chữ đã chốt thuộc lớp này. [App/main.swift](App/main.swift)
+- **Lõi SongNgu.** `Session` sở hữu chuỗi phím gốc, lịch sử ngữ cảnh và lựa chọn sửa tay. Mỗi từ đang soạn có một `TelexEngine` để tạo cách viết tiếng Việt. `Ranker` nhận các cách viết và ngữ cảnh để chấm điểm, độc lập với API nhập liệu của macOS. [Session.swift](Core/Session.swift) · [Context.swift](Core/Context.swift) · [Ranker.swift](Core/Ranker.swift)
+- **Huấn luyện ngoại tuyến.** Các công cụ trong `Tools/` tạo dữ liệu mô hình. Bản macOS mặc định đóng gói bảng n-gram, danh sách cặp từ và trọng số của `SeedRanker`. XLM-R chỉ dùng trong thí nghiệm huấn luyện. [Công cụ huấn luyện](Tools/fit_context.py) · [Cấu hình đóng gói](build.sh)
 
 ## Build và kiểm thử
 
