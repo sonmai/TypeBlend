@@ -4,42 +4,46 @@ Bộ gõ Telex song ngữ cho macOS Apple Silicon. SongNgu sử dụng ngữ c�
 
 ## Kiến trúc bộ gõ
 
-SongNgu chạy trên Mac dưới dạng một ứng dụng bộ gõ dùng InputMethodKit. Sơ đồ thể hiện các thành phần của bản phát hành mặc định. Mũi tên hướng từ thành phần sử dụng đến thành phần mà nó phụ thuộc.
+### Tổng quan hệ thống
+
+SongNgu là bộ gõ chạy cục bộ trên Mac. Người dùng chọn SongNgu làm nguồn nhập của macOS và tiếp tục soạn thảo trong ứng dụng như Notes hoặc Word. macOS kết nối ô nhập liệu với bộ gõ qua InputMethodKit. SongNgu sở hữu phần xử lý Telex và chọn cách viết Anh–Việt theo ngữ cảnh. Dữ liệu cần để gõ nằm sẵn trong `SongNgu.app`.
+
+### Các thành phần bên trong SongNgu.app
+
+Các mũi tên biểu thị quan hệ phụ thuộc giữa các thành phần.
 
 ```mermaid
 flowchart TB
-    host["Ứng dụng nhập văn bản · Notes, Word"]
-    imk["InputMethodKit · macOS"]
+    mac["InputMethodKit của macOS"]
     subgraph bundle["SongNgu.app"]
-        subgraph adapter["App · tích hợp macOS"]
-            controller["SongNguController"]
-        end
-        subgraph core["Core · mã của SongNgu"]
-            session["Session · trạng thái phiên gõ"]
+        adapter["App · SongNguController"]
+        subgraph core["Core · lõi SongNgu"]
+            session["Session · quản lý phiên gõ"]
             ranker["Ranker · chọn cách viết"]
-            seed["SeedRanker · mô hình cho gif và max"]
         end
-        subgraph upstream["TelexCore · mã từ VietTelex"]
-            telex["TelexEngine · quy tắc Telex"]
-        end
-        subgraph assets["Resources · dữ liệu đóng gói"]
-            tables["Bảng n-gram và danh sách cặp từ"]
-            weights["model.json · trọng số SeedRanker"]
-        end
+        telex["TelexCore · thư viện từ VietTelex"]
+        assets["Resources · dữ liệu mô hình"]
     end
-    host ---|giao thức nhập văn bản| imk
-    controller -->|kế thừa IMKInputController| imk
-    controller -->|sở hữu phiên gõ| session
-    session -->|dùng cho từng từ| telex
+    adapter -->|tích hợp với| mac
+    adapter -->|sở hữu| session
+    session -->|tạo ứng viên tiếng Việt| telex
     session -->|ủy quyền chọn từ| ranker
-    ranker -->|tra cứu| tables
-    ranker -->|dùng cho hai cặp đặc thù| seed
-    ranker -->|nạp trọng số| weights
+    ranker -->|đọc| assets
 ```
 
-- **Tích hợp macOS.** `SongNguController` quản lý giao tiếp với ô nhập liệu qua `IMKTextInput`. Phần hiển thị chữ đang soạn và chèn chữ đã chốt thuộc lớp này. [App/main.swift](App/main.swift)
-- **Lõi SongNgu.** `Session` sở hữu chuỗi phím gốc, lịch sử ngữ cảnh và lựa chọn sửa tay. Mỗi từ đang soạn có một `TelexEngine` để tạo cách viết tiếng Việt. `Ranker` nhận các cách viết và ngữ cảnh để chấm điểm, độc lập với API nhập liệu của macOS. [Session.swift](Core/Session.swift) · [Context.swift](Core/Context.swift) · [Ranker.swift](Core/Ranker.swift)
-- **Huấn luyện ngoại tuyến.** Các công cụ trong `Tools/` tạo dữ liệu mô hình. Bản macOS mặc định đóng gói bảng n-gram, danh sách cặp từ và trọng số của `SeedRanker`. XLM-R chỉ dùng trong thí nghiệm huấn luyện. [Công cụ huấn luyện](Tools/fit_context.py) · [Cấu hình đóng gói](build.sh)
+`SongNguController` chịu trách nhiệm hiển thị chữ đang soạn và chèn chữ đã chốt vào ứng dụng. `Session` giữ chuỗi phím gốc, từ đang soạn, ngữ cảnh và lựa chọn sửa tay. Nhờ ranh giới này, có thể kiểm thử cùng một lõi chọn từ bằng cách phát lại chuỗi phím mà không phải mở Notes. [Tích hợp macOS](App/main.swift) · [Phiên gõ](Core/Session.swift) · [Kiểm thử phát lại](Tests/main.swift)
+
+### Chi tiết bộ chọn từ và dữ liệu mô hình
+
+`Ranker` nhận chuỗi phím gốc, kết quả Telex và các từ lân cận từ `Session`. Bản phát hành mặc định sử dụng các thành phần sau.
+
+| Thành phần | Dữ liệu đóng gói | Trách nhiệm |
+|---|---|---|
+| Danh sách cặp nhập nhằng | `collisions.txt` và danh sách trong `model.json` | Xác định những chuỗi phím mà bộ chọn hỗ trợ. |
+| Bộ chấm điểm n-gram trong `Ranker` | `ng.bin`, `ng-tags.bin` | Tra điểm của các cụm từ lân cận và kiểm tra dấu nhận dạng của mục tra cứu. Khi bằng chứng yếu, dùng kết quả mặc định của lõi Telex. |
+| `SeedRanker` | `model.json` | Chấm điểm riêng cho hai cặp `gif/gì` và `max/mã`. |
+
+Các công cụ Python trong `Tools/` tạo dữ liệu cho bản build. XLM-R được dùng để huấn luyện mô hình thử nghiệm trên máy phát triển. Bộ gõ phát hành chỉ nạp các tài nguyên cục bộ liệt kê ở trên. [Ranker](Core/Context.swift) · [SeedRanker](Core/Ranker.swift) · [Huấn luyện](Tools/fit_context.py) · [Đóng gói](build.sh)
 
 ## Build và kiểm thử
 
