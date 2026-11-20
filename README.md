@@ -2,6 +2,32 @@
 
 TypeBlend is a Vietnamese–English Telex input method for Apple Silicon Macs. It lets you type both languages in the same sentence. When a sequence such as `gif` could mean either the English file format or the Vietnamese word *gì*, TypeBlend uses nearby words to choose a spelling. All typing and scoring stay on your Mac.
 
+## Install or update
+
+On an Apple Silicon Mac running macOS 13 or later, open the [latest TypeBlend.pkg](https://github.com/sonmai/TypeBlend/releases/latest/download/TypeBlend.pkg) and install it for your user account. This link becomes active with the first notarized release. The installer upgrades the existing `~/Library/Input Methods/TypeBlend.app` in place. Sign out and back in to load the new build. On first install, add TypeBlend under System Settings → Keyboard → Input Sources → Vietnamese.
+
+## Release
+
+Push a semantic version tag on the tested commit, for example:
+
+```sh
+git tag v0.2.7
+git push origin v0.2.7
+```
+
+GitHub Actions uses the tag as the installer and application version. It runs the tests, exercises a user-local upgrade, signs the application and installer, submits the installer to Apple, staples and verifies the ticket, then publishes `TypeBlend.pkg` to GitHub Releases.
+
+Configure these repository secrets once:
+
+| Secret | Value |
+|---|---|
+| `DEVELOPER_ID_P12_BASE64` | Base64-encoded, password-protected PKCS#12 export containing the Developer ID Application and Developer ID Installer certificates and their private keys |
+| `DEVELOPER_ID_P12_PASSWORD` | Password for that export |
+| `NOTARY_KEY_BASE64` | Base64-encoded App Store Connect team API private key for notarization |
+| `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` | Key ID and issuer ID for the same team key |
+
+If credentials are missing, configure them under Settings → Secrets and variables → Actions and rerun the failed release job for the same tag. For a local packaging test, run `./Packaging/package.sh 0.2.7`. Without signing identities it produces a development installer in `build/TypeBlend.pkg`.
+
 ## Architecture
 
 ### System overview
