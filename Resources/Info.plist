@@ -5,21 +5,21 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>SongNgu</string>
+	<string>TypeBlend</string>
 	<key>CFBundleExecutable</key>
-	<string>SongNgu</string>
+	<string>TypeBlend</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.songngu.inputmethod.Telex</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>SongNgu</string>
+	<string>TypeBlend</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.2.2</string>
+	<string>0.2.3</string>
 	<key>CFBundleVersion</key>
-	<string>4</string>
+	<string>5</string>
 	<key>ComponentInputModeDict</key>
 	<dict>
 		<key>tsInputModeListKey</key>
@@ -33,7 +33,7 @@
 				<key>tsInputModeAlternateMenuIconFileKey</key>
 				<string>MenuIcon.pdf</string>
 				<key>tsInputModeAlternateMenuTitleStringKey</key>
-				<string>SongNgu</string>
+				<string>TypeBlend</string>
 				<key>tsInputModeCharacterRepertoireKey</key>
 				<array>
 					<string>Latn</string>
@@ -62,9 +62,9 @@
 	<key>InputMethodConnectionName</key>
 	<string>org.songngu.inputmethod.Telex_Connection</string>
 	<key>InputMethodServerControllerClass</key>
-	<string>SongNguController</string>
+	<string>TypeBlendController</string>
 	<key>InputMethodServerDelegateClass</key>
-	<string>SongNguController</string>
+	<string>TypeBlendController</string>
 	<key>LSBackgroundOnly</key>
 	<false/>
 	<key>LSMinimumSystemVersion</key>

@@ -11,7 +11,7 @@ int main(int argc,char **argv) {
     CFDictionaryRef query=CFDictionaryCreate(NULL,(const void**)&key,(const void**)&id,1,&kCFTypeDictionaryKeyCallBacks,&kCFTypeDictionaryValueCallBacks);
     CFArrayRef list=TISCreateInputSourceList(query,true);
     CFRelease(query);
-    if(!list || !CFArrayGetCount(list)) { puts("SongNgu is not visible in this login session.");return 3; }
+    if(!list || !CFArrayGetCount(list)) { puts("TypeBlend is not visible in this login session.");return 3; }
     TISInputSourceRef src=(TISInputSourceRef)CFArrayGetValueAtIndex(list,0);
     OSStatus enable=TISEnableInputSource(src);
     printf("Enable: %d\n",(int)enable);
@@ -20,7 +20,7 @@ int main(int argc,char **argv) {
     TISInputSourceRef current=TISCopyCurrentKeyboardInputSource();
     CFStringRef active=current?TISGetInputSourceProperty(current,kTISPropertyInputSourceID):NULL;
     int ok=active && CFEqual(active,id);
-    puts(ok?"SongNgu is active.":"SongNgu selection has not been verified.");
+    puts(ok?"TypeBlend is active.":"TypeBlend selection has not been verified.");
     if(current) CFRelease(current);
     CFRelease(list);
     return ok?0:4;

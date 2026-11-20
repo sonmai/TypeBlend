@@ -5,8 +5,8 @@ import Carbon
 let noRange = NSRange(location: NSNotFound, length: 0)
 let model = try Ranker(Bundle.main.resourceURL!)
 
-@objc(SongNguController)
-class SongNguController: IMKInputController {
+@objc(TypeBlendController)
+class TypeBlendController: IMKInputController {
     private var session = Session(model)
     private func display(_ client: IMKTextInput, committed: String = "") {
         if !committed.isEmpty { client.insertText(committed, replacementRange: noRange) }
