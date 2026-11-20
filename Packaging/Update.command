@@ -27,5 +27,5 @@ if ! mv "$stage/new.app" "$dst"; then
     [[ ! -d "$stage/previous" ]] || mv "$stage/previous" "$previous"
     exit 1
 fi
-echo "Đã cài TypeBlend 0.2.3"
+echo "Đã cài TypeBlend 0.2.4"
 ./activate "$dst" || echo "Hãy chọn TypeBlend từ menu bộ gõ của macOS."
