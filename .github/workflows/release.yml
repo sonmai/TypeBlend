@@ -23,40 +23,10 @@ jobs:
           installer -pkg build/TypeBlend.pkg -target CurrentUserHomeDirectory
           test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$dest/Contents/Info.plist")" = "${GITHUB_REF_NAME#v}"
           codesign --verify --strict "$dest"
-      - name: Import Developer ID identities and notarization credentials
-        env:
-          CERTIFICATES: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
-          CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
-          API_KEY: ${{ secrets.NOTARY_KEY_BASE64 }}
-          KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
-          ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
-        run: |
-          : "${CERTIFICATES:?Configure DEVELOPER_ID_P12_BASE64 with both Developer ID identities}"
-          : "${CERT_PASSWORD:?}" "${API_KEY:?}" "${KEY_ID:?}" "${ISSUER_ID:?}"
-          keychain="$RUNNER_TEMP/release.keychain-db"
-          password=$(openssl rand -hex 32)
-          security create-keychain -p "$password" "$keychain"
-          security unlock-keychain -p "$password" "$keychain"
-          security set-keychain-settings -lut 21600 "$keychain"
-          security list-keychains -d user -s "$keychain" "$HOME/Library/Keychains/login.keychain-db"
-          security default-keychain -d user -s "$keychain"
-          printf %s "$CERTIFICATES" | base64 -D > "$RUNNER_TEMP/sign.p12"
-          security import "$RUNNER_TEMP/sign.p12" -k "$keychain" -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productbuild -T /usr/bin/productsign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" >/dev/null
-          printf %s "$API_KEY" | base64 -D > "$RUNNER_TEMP/notary.p8"
-          xcrun notarytool store-credentials release --key "$RUNNER_TEMP/notary.p8" --key-id "$KEY_ID" --issuer "$ISSUER_ID"
-          rm "$RUNNER_TEMP/sign.p12" "$RUNNER_TEMP/notary.p8"
-      - name: Sign, notarize and verify
-        env:
-          APP_SIGN_ID: Developer ID Application
-          INSTALLER_SIGN_ID: Developer ID Installer
-        run: |
-          ./Packaging/package.sh "${GITHUB_REF_NAME#v}"
-          xcrun notarytool submit build/TypeBlend.pkg --keychain-profile release --wait
-          xcrun stapler staple build/TypeBlend.pkg
-          xcrun stapler validate build/TypeBlend.pkg
-          spctl --assess --type install --verbose build/TypeBlend.pkg
-      - name: Publish installer
+      - name: Publish community installer
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" build/TypeBlend.pkg --verify-tag --generate-notes --title "TypeBlend ${GITHUB_REF_NAME#v}"
+        run: |
+          cd build
+          shasum -a 256 TypeBlend.pkg > TypeBlend.pkg.sha256
+          gh release create "$GITHUB_REF_NAME" TypeBlend.pkg TypeBlend.pkg.sha256 --verify-tag --generate-notes --title "TypeBlend ${GITHUB_REF_NAME#v}" --notes "Apple Silicon community build. The installer is unsigned and has not been notarized by Apple. See the installation instructions in the repository README."

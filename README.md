@@ -4,29 +4,22 @@ TypeBlend is a Vietnamese–English Telex input method for Apple Silicon Macs. I
 
 ## Install or update
 
-On an Apple Silicon Mac running macOS 13 or later, open the [latest TypeBlend.pkg](https://github.com/sonmai/TypeBlend/releases/latest/download/TypeBlend.pkg) and install it for your user account. This link becomes active with the first notarized release. The installer upgrades the existing `~/Library/Input Methods/TypeBlend.app` in place. Sign out and back in to load the new build. On first install, add TypeBlend under System Settings → Keyboard → Input Sources → Vietnamese.
+On an Apple Silicon Mac running macOS 13 or later, open the [latest TypeBlend.pkg](https://github.com/sonmai/TypeBlend/releases/latest/download/TypeBlend.pkg) and install it for your user account. The installer upgrades the existing `~/Library/Input Methods/TypeBlend.app` in place. Sign out and back in to load the new build. On first install, add TypeBlend under System Settings → Keyboard → Input Sources → Vietnamese.
+
+The community installer is unsigned and has not been notarized by Apple. If macOS blocks the downloaded installer because the developer cannot be verified, first confirm it came from this repository’s Releases page. To approve this installer, open System Settings → Privacy & Security → Open Anyway. [Apple’s instructions](https://support.apple.com/en-au/102445)
 
 ## Release
 
 Push a semantic version tag on the tested commit, for example:
 
 ```sh
-git tag v0.2.7
-git push origin v0.2.7
+git tag v0.2.8
+git push origin v0.2.8
 ```
 
-GitHub Actions uses the tag as the installer and application version. It runs the tests, exercises a user-local upgrade, signs the application and installer, submits the installer to Apple, staples and verifies the ticket, then publishes `TypeBlend.pkg` to GitHub Releases.
+GitHub Actions uses the tag as the release version, runs the tests, installs the package over the existing per-user app layout, verifies the installed bundle, and publishes the tested installer and its SHA-256 checksum to GitHub Releases. This community release requires no Apple Developer Program membership or signing secrets.
 
-Configure these repository secrets once:
-
-| Secret | Value |
-|---|---|
-| `DEVELOPER_ID_P12_BASE64` | Base64-encoded, password-protected PKCS#12 export containing the Developer ID Application and Developer ID Installer certificates and their private keys |
-| `DEVELOPER_ID_P12_PASSWORD` | Password for that export |
-| `NOTARY_KEY_BASE64` | Base64-encoded App Store Connect team API private key for notarization |
-| `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` | Key ID and issuer ID for the same team key |
-
-If credentials are missing, configure them under Settings → Secrets and variables → Actions and rerun the failed release job for the same tag. For a local packaging test, run `./Packaging/package.sh 0.2.7`. Without signing identities it produces a development installer in `build/TypeBlend.pkg`.
+To reproduce the package locally, run `./Packaging/package.sh 0.2.8`. The output is `build/TypeBlend.pkg`.
 
 ## Architecture
 
