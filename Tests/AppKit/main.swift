@@ -31,6 +31,15 @@ update(commit)
 print(v.string)
 guard v.string == "📌 Gửi mình file gif nhé. Bạn vừa gửi mình file gì vậy? sau", !v.hasMarkedText() else { exit(1) }
 
+for id in ["com.microsoft.VSCode", "com.microsoft.VSCodeInsiders", "com.apple.Safari",
+           "com.google.Chrome", "org.mozilla.firefox", "com.microsoft.edgemac",
+           "com.brave.Browser", "company.thebrowser.Browser"] {
+    precondition(InlineComposition.enabled(in: id), id)
+}
+for id in [nil, "com.apple.Terminal", "com.google.Chrome.app.example"] {
+    precondition(!InlineComposition.enabled(in: id))
+}
+
 var inline = InlineComposition()
 v.string = "📌 [chèn] sau"
 v.setSelectedRange((v.string as NSString).range(of: "[chèn]"))
