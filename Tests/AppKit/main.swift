@@ -71,11 +71,18 @@ precondition(inline.status(v.selectedRange()) { _ in nil } == .moved)
 s = Session(model, preferences: prefs)
 s.lookahead = false
 v.string = ""
+var buffered = InlineComposition()
+func displayBuffered(_ committed: String) {
+    buffered.display(committed: committed, composing: s.marked, selection: none, bufferWord: true) {
+        v.insertText($0, replacementRange: $1)
+    }
+}
 for c in "tooi" {
     s.type(c)
-    precondition(!v.hasMarkedText())
+    displayBuffered("")
+    precondition(v.string.isEmpty && !v.hasMarkedText())
 }
-v.insertText(s.boundary(" "), replacementRange: none)
+displayBuffered(s.boundary(" "))
 precondition(v.string == "tôi " && !v.hasMarkedText())
 
 // Replace only our last committed word and separator, after a UTF-16 surrogate pair.
