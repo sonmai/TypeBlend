@@ -11,21 +11,25 @@ class TypeBlendController: IMKInputController {
     private var recentCaret: NSRange?
     private var inline = InlineComposition()
 
+    private var useMarkedText = false
+
     private func synchronize(_ client: IMKTextInput) {
-        if InlineComposition.enabled(in: client.bundleIdentifier()),
-           !inline.matches(client.selectedRange(), read: { client.attributedSubstring(from: $0)?.string }) {
-            inline = InlineComposition()
-            session = Session(model)
-        }
+        guard !useMarkedText, InlineComposition.enabled(in: client.bundleIdentifier()) else { return }
+        let status = inline.status(client.selectedRange()) { client.attributedSubstring(from: $0)?.string }
+        guard status != .ready else { return }
+        // Existing inline text is already in the document. Never replay it at a new caret.
+        inline = InlineComposition()
+        session = Session(model)
+        recentCaret = nil
+        useMarkedText = status == .unavailable
     }
 
     private func display(_ client: IMKTextInput, committed: String = "") {
-        if InlineComposition.enabled(in: client.bundleIdentifier()) {
+        if !useMarkedText, InlineComposition.enabled(in: client.bundleIdentifier()) {
             let selection = client.selectedRange()
             inline.display(committed: committed, composing: session.marked, selection: selection) {
                 client.insertText($0, replacementRange: $1)
             }
-            if selection.location == NSNotFound { session = Session(model) }
             return
         }
         if !committed.isEmpty { client.insertText(committed, replacementRange: noRange) }
@@ -64,7 +68,7 @@ class TypeBlendController: IMKInputController {
             return true
         }
         guard let chars = event.characters, chars.count == 1, let c = chars.first,
-              c.isASCII, c.isLetter || c == " " || c.isNumber || c.isPunctuation else {
+              (c.isASCII || c == "’"), c.isLetter || c == " " || c.isNumber || c.isPunctuation else {
             commitComposition(sender)
             return false
         }
@@ -86,7 +90,11 @@ class TypeBlendController: IMKInputController {
         session.forget()
         inline = InlineComposition()
     }
-    override func deactivateServer(_ sender: Any!) { commitComposition(sender); super.deactivateServer(sender) }
+    override func deactivateServer(_ sender: Any!) {
+        commitComposition(sender)
+        useMarkedText = false
+        super.deactivateServer(sender)
+    }
 }
 
 if CommandLine.arguments.contains("--register") {
