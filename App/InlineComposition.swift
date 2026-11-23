@@ -32,9 +32,13 @@ struct InlineComposition {
     }
 
     mutating func display(committed: String, composing: String, selection: NSRange,
-                          insert: (String, NSRange) -> Void) {
-        let updated = committed + composing
+                          bufferWord: Bool = false, insert: (String, NSRange) -> Void) {
         let selectionRange = NSRange(location: NSNotFound, length: 0)
+        if bufferWord {
+            if !committed.isEmpty { insert(committed, selectionRange) }
+            return
+        }
+        let updated = committed + composing
         if visible.isEmpty {
             if !updated.isEmpty { insert(updated, selectionRange) }
             start = selection.location
