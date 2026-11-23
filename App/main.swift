@@ -11,21 +11,27 @@ class TypeBlendController: IMKInputController {
     private var recentCaret: NSRange?
     private var inline = InlineComposition()
 
-    private var useMarkedText = false
+    private var bufferWord = false
 
     private func synchronize(_ client: IMKTextInput) {
-        guard !useMarkedText, InlineComposition.enabled(in: client.bundleIdentifier()) else { return }
+        guard InlineComposition.enabled(in: client.bundleIdentifier()) else { return }
+        // Finish an invisible word through the same path even if the caret reappears.
+        if bufferWord && session.active { return }
         let status = inline.status(client.selectedRange()) { client.attributedSubstring(from: $0)?.string }
-        guard status != .ready else { return }
+        guard status != .ready else { bufferWord = false; return }
         // Existing inline text is already in the document. Never replay it at a new caret.
         inline = InlineComposition()
         session = Session(model)
         recentCaret = nil
-        useMarkedText = status == .unavailable
+        bufferWord = status == .unavailable
     }
 
     private func display(_ client: IMKTextInput, committed: String = "") {
-        if !useMarkedText, InlineComposition.enabled(in: client.bundleIdentifier()) {
+        if InlineComposition.enabled(in: client.bundleIdentifier()) {
+            if bufferWord {
+                if !committed.isEmpty { client.insertText(committed, replacementRange: noRange) }
+                return
+            }
             let selection = client.selectedRange()
             inline.display(committed: committed, composing: session.marked, selection: selection) {
                 client.insertText($0, replacementRange: $1)
@@ -72,7 +78,7 @@ class TypeBlendController: IMKInputController {
             commitComposition(sender)
             return false
         }
-        session.lookahead = !["com.apple.Terminal", "com.googlecode.iterm2", "com.microsoft.VSCode"].contains(client.bundleIdentifier() ?? "")
+        session.lookahead = !bufferWord && !["com.apple.Terminal", "com.googlecode.iterm2", "com.microsoft.VSCode"].contains(client.bundleIdentifier() ?? "")
         if c.isLetter { session.type(c); display(client) }
         else {
             let output = session.boundary(String(c))
@@ -92,7 +98,7 @@ class TypeBlendController: IMKInputController {
     }
     override func deactivateServer(_ sender: Any!) {
         commitComposition(sender)
-        useMarkedText = false
+        bufferWord = false
         super.deactivateServer(sender)
     }
 }
