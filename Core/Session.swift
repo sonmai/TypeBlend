@@ -7,7 +7,8 @@ private struct Word {
     var explicitCorrection = false
     var correctedRaw: String?
     init() { engine.liveSpellCheck = true }
-    var live: String { forced ?? engine.composed }
+    var composed: String { engine.isOverflowed ? raw : engine.composed }
+    var live: String { forced ?? composed }
     mutating func add(_ c: Character, preferences: TypingPreferences) {
         forced = nil
         explicitCorrection = false
@@ -15,9 +16,9 @@ private struct Word {
         _ = engine.feed(c)
         if raw == correctedRaw { forced = preferences.prefix(raw) ? raw : live }
     }
-    var normal: String {
-        var copy = engine
-        return copy.commitText(autoRestore: true)
+    func normal(before boundary: Character? = nil) -> String {
+        if engine.isOverflowed { return raw }
+        return engine.peekCommitText(autoRestore: true, boundary: boundary)
     }
 }
 
@@ -77,22 +78,22 @@ struct Session {
     var active: Bool { pending != nil || !word.raw.isEmpty }
     mutating func type(_ c: Character) { finishRecent(); word.add(c, preferences: preferences) }
 
-    private func choose(_ w: Word, next: String = "") -> String {
+    private func choose(_ w: Word, next: String = "", boundary: Character? = nil) -> String {
         if let forced = w.forced { return forced }
         if preferences.literal(w.raw) { return w.raw }
-        if w.raw != w.engine.composed, let raw = preferences.preference(contextKey(w.raw)) {
-            return raw ? w.raw : w.engine.composed
+        if w.raw != w.composed, let raw = preferences.preference(contextKey(w.raw)) {
+            return raw ? w.raw : w.composed
         }
-        return model.choose(raw: w.raw, composed: w.engine.composed, fallback: w.normal,
+        return model.choose(raw: w.raw, composed: w.composed, fallback: w.normal(before: boundary),
                                  left: history, next: next)
     }
     private mutating func remember(_ text: String) {
         if !text.isEmpty { history.append(text) }
         if history.count > 12 { history.removeFirst() }
     }
-    private mutating func settlePending() -> String {
+    private mutating func settlePending(before boundary: Character?) -> String {
         guard let p = pending else { return "" }
-        let text = choose(p, next: word.normal)
+        let text = choose(p, next: word.normal(before: boundary), boundary: " ")
         if p.explicitCorrection { preferences.record(contextKey(p.raw), raw: text == p.raw) }
         pending = nil
         remember(text)
@@ -100,15 +101,15 @@ struct Session {
     }
     mutating func boundary(_ separator: String) -> String {
         finishRecent()
-        var result = settlePending()
-        let text = choose(word)
+        var result = settlePending(before: separator.first)
+        let text = choose(word, boundary: separator.first)
         if separator == " ", lookahead, model.supported.contains(word.raw.lowercased()),
-           word.raw != word.engine.composed {
+           word.raw != word.composed {
             pending = word
             pendingChoice = text
         } else {
             if !separator.isEmpty, !word.raw.isEmpty {
-                recent = Recent(raw: word.raw, composed: word.engine.composed, separator: separator,
+                recent = Recent(raw: word.raw, composed: word.composed, separator: separator,
                                 key: contextKey(word.raw), choice: text, corrected: word.explicitCorrection)
             } else if word.explicitCorrection { preferences.record(contextKey(word.raw), raw: text == word.raw) }
             remember(text)
@@ -128,7 +129,7 @@ struct Session {
             for c in rest { word.add(c, preferences: preferences) }
         } else if let p = pending {
             word = p
-            word.forced = p.forced ?? p.engine.composed
+            word.forced = p.forced ?? p.composed
             word.correctedRaw = p.raw
             pending = nil
         } else { forget(); return false }
@@ -136,15 +137,15 @@ struct Session {
     }
     mutating func toggle() -> Bool {
         if word.raw.isEmpty, var p = pending {
-            pendingChoice = pendingChoice == p.raw ? p.engine.composed : p.raw
+            pendingChoice = pendingChoice == p.raw ? p.composed : p.raw
             p.explicitCorrection = true
             p.forced = pendingChoice
             pending = p
             return true
         }
-        guard word.raw != word.engine.composed else { return false }
+        guard word.raw != word.composed else { return false }
         word.explicitCorrection = true
-        word.forced = live == word.raw ? word.engine.composed : word.raw
+        word.forced = live == word.raw ? word.composed : word.raw
         return true
     }
 }
