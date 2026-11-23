@@ -67,6 +67,17 @@ precondition(InlineComposition().status(none) { _ in nil } == .unavailable)
 v.setSelectedRange(NSRange(location: 0, length: 0))
 precondition(inline.status(v.selectedRange()) { _ in nil } == .moved)
 
+// A field with no readable caret receives only committed, plain text.
+s = Session(model, preferences: prefs)
+s.lookahead = false
+v.string = ""
+for c in "tooi" {
+    s.type(c)
+    precondition(!v.hasMarkedText())
+}
+v.insertText(s.boundary(" "), replacementRange: none)
+precondition(v.string == "tôi " && !v.hasMarkedText())
+
 // Replace only our last committed word and separator, after a UTF-16 surrogate pair.
 s = Session(model, preferences: prefs)
 s.lookahead = false
