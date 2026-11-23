@@ -1,7 +1,11 @@
 name: Release macOS installer
 on:
   push:
+    branches: [main]
     tags: ['v*']
+concurrency:
+  group: typeblend-release
+  queue: max
 permissions:
   contents: read
 jobs:
@@ -11,6 +15,38 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Select release version
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import subprocess
+
+          def versions(*args):
+              tags = subprocess.check_output(["git", "tag", *args], text=True).splitlines()
+              pattern = r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+              return sorted(tuple(map(int, match.groups())) for tag in tags
+                            if (match := re.fullmatch(pattern, tag)))
+
+          if os.environ["GITHUB_REF_TYPE"] == "tag":
+              tag = os.environ["GITHUB_REF_NAME"]
+              if not versions("--list", tag):
+                  raise SystemExit(f"Expected a vMAJOR.MINOR.PATCH tag, got {tag}")
+          else:
+              at_head = versions("--points-at", "HEAD")
+              if at_head:
+                  major, minor, patch = at_head[-1]
+              else:
+                  major, minor, previous = max(versions(), default=(0, 0, 0))
+                  patch = previous + 1
+              tag = f"v{major}.{minor}.{patch}"
+
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              print(f"RELEASE_TAG={tag}", file=env)
+              print(f"VERSION={tag[1:]}", file=env)
+          PY
       - name: Test
         run: ./test.sh
       - name: Test upgrade from the pre-installer layout
@@ -19,9 +55,9 @@ jobs:
           dest="$HOME/Library/Input Methods/TypeBlend.app"
           mkdir -p "$(dirname "$dest")"
           ditto build/TypeBlend.app "$dest"
-          ./Packaging/package.sh "${GITHUB_REF_NAME#v}"
+          ./Packaging/package.sh "$VERSION"
           installer -pkg build/TypeBlend.pkg -target CurrentUserHomeDirectory
-          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$dest/Contents/Info.plist")" = "${GITHUB_REF_NAME#v}"
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$dest/Contents/Info.plist")" = "$VERSION"
           codesign --verify --strict "$dest"
       - name: Publish community installer
         env:
@@ -29,4 +65,20 @@ jobs:
         run: |
           cd build
           shasum -a 256 TypeBlend.pkg > TypeBlend.pkg.sha256
-          gh release create "$GITHUB_REF_NAME" TypeBlend.pkg TypeBlend.pkg.sha256 --verify-tag --generate-notes --title "TypeBlend ${GITHUB_REF_NAME#v}" --notes "Apple Silicon community build. The installer is unsigned and has not been notarized by Apple. See the installation instructions in the repository README."
+          if ! git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            git tag "$RELEASE_TAG" HEAD
+            git push origin "refs/tags/$RELEASE_TAG"
+          fi
+
+          if draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft); then
+            if [[ "$draft" == false ]]; then
+              echo "$RELEASE_TAG is already published"
+              exit 0
+            fi
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --draft --generate-notes \
+              --title "TypeBlend $VERSION" \
+              --notes "Apple Silicon community build. The installer is unsigned and has not been notarized by Apple. See README for installation instructions."
+          fi
+          gh release upload "$RELEASE_TAG" TypeBlend.pkg TypeBlend.pkg.sha256 --clobber
+          gh release edit "$RELEASE_TAG" --draft=false

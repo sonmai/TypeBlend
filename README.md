@@ -16,14 +16,7 @@ The community installer is unsigned and has not been notarized by Apple. If macO
 
 ## Release
 
-Push a semantic version tag on the tested commit, for example:
-
-```sh
-git tag v0.2.8
-git push origin v0.2.8
-```
-
-GitHub Actions uses the tag as the release version, runs the tests, installs the package over the existing per-user app layout, verifies the installed bundle, and publishes the tested installer and its SHA-256 checksum to GitHub Releases. This community release requires no Apple Developer Program membership or signing secrets.
+Every push to `main`, including a merged pull request, triggers a release. GitHub Actions selects the next patch after the highest stable version tag. It runs the tests, installs the package over the existing per-user app, verifies the bundle, and publishes `TypeBlend.pkg` and its SHA-256 checksum. A rerun reuses the tag on the same commit. To select a specific version manually, push a `vMAJOR.MINOR.PATCH` tag. This community release requires no Apple Developer Program membership or signing secrets.
 
 To reproduce the package locally, run `./Packaging/package.sh 0.2.8`. The output is `build/TypeBlend.pkg`.
 
