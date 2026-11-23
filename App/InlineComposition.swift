@@ -5,21 +5,6 @@ struct InlineComposition {
     private var start = 0
     private var visible = ""
 
-    private static let inlineClients: Set<String> = [
-        "com.apple.notes", "com.openai.chat", "com.openai.chatgpt", "com.openai.codex",
-        "com.microsoft.vscode", "com.microsoft.vscodeinsiders",
-        "com.apple.safari", "com.apple.safaritechnologypreview",
-        "com.google.chrome", "com.google.chrome.beta", "com.google.chrome.dev",
-        "com.google.chrome.canary", "org.chromium.chromium",
-        "org.mozilla.firefox", "org.mozilla.firefoxdeveloperedition", "org.mozilla.nightly",
-        "com.microsoft.edgemac", "com.brave.browser", "company.thebrowser.browser",
-    ]
-
-    static func enabled(in bundleID: String?) -> Bool {
-        guard let bundleID else { return false }
-        return inlineClients.contains(bundleID.lowercased())
-    }
-
     enum Status { case ready, moved, unavailable }
 
     func status(_ selection: NSRange, read: (NSRange) -> String?) -> Status {

@@ -7,39 +7,6 @@ let suite = "TypeBlendAppKit-" + UUID().uuidString
 let defaults = UserDefaults(suiteName: suite)!
 let prefs = TypingPreferences(defaults)
 var s = Session(model, preferences: prefs)
-func update(_ commit: String) {
-    if !commit.isEmpty { v.insertText(commit,replacementRange:none) }
-    let text = s.marked
-    if !text.isEmpty || (commit.isEmpty && v.hasMarkedText()) {
-        let marked = markedTextForDisplay(text)
-        if marked.length > 0 {
-            marked.enumerateAttribute(.underlineStyle, in: NSRange(location: 0, length: marked.length)) { style, _, _ in
-                precondition((style as? NSNumber)?.intValue == 0)
-            }
-        }
-        v.setMarkedText(marked, selectedRange:NSRange(location:text.utf16.count,length:0),replacementRange:none)
-    }
-}
-v.string = "📌 [chèn] sau"
-v.setSelectedRange((v.string as NSString).range(of:"[chèn]"))
-for c in "Guwir minhf file gif nhes. Banj vuwaf guwir minhf file gif vaayj?" {
-    if c.isLetter { s.type(c); update("") }
-    else { let commit = s.boundary(String(c)); update(commit) }
-}
-let commit = s.finish()
-update(commit)
-print(v.string)
-guard v.string == "📌 Gửi mình file gif nhé. Bạn vừa gửi mình file gì vậy? sau", !v.hasMarkedText() else { exit(1) }
-
-for id in ["com.microsoft.VSCode", "com.microsoft.VSCodeInsiders", "com.apple.Safari",
-           "com.google.Chrome", "org.mozilla.firefox", "com.microsoft.edgemac",
-           "com.brave.Browser", "company.thebrowser.Browser"] {
-    precondition(InlineComposition.enabled(in: id), id)
-}
-for id in [nil, "com.apple.Terminal", "com.google.Chrome.app.example"] {
-    precondition(!InlineComposition.enabled(in: id))
-}
-
 var inline = InlineComposition()
 v.string = "📌 [chèn] sau"
 v.setSelectedRange((v.string as NSString).range(of: "[chèn]"))

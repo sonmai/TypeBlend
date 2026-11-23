@@ -2,7 +2,6 @@ import Cocoa
 import InputMethodKit
 import Carbon
 
-let noRange = NSRange(location: NSNotFound, length: 0)
 let model = try Ranker(Bundle.main.resourceURL!)
 
 @objc(TypeBlendController)
@@ -14,7 +13,6 @@ class TypeBlendController: IMKInputController {
     private var bufferWord = false
 
     private func synchronize(_ client: IMKTextInput) {
-        guard InlineComposition.enabled(in: client.bundleIdentifier()) else { return }
         // A field may report a caret but consistently refuse text readback.
         if bufferWord { return }
         let status = inline.status(client.selectedRange()) { client.attributedSubstring(from: $0)?.string }
@@ -27,17 +25,9 @@ class TypeBlendController: IMKInputController {
     }
 
     private func display(_ client: IMKTextInput, committed: String = "") {
-        if InlineComposition.enabled(in: client.bundleIdentifier()) {
-            inline.display(committed: committed, composing: session.marked, selection: client.selectedRange(),
-                           bufferWord: bufferWord) {
-                client.insertText($0, replacementRange: $1)
-            }
-            return
-        }
-        if !committed.isEmpty { client.insertText(committed, replacementRange: noRange) }
-        let text = session.marked
-        if !text.isEmpty || (committed.isEmpty && client.markedRange().location != NSNotFound) {
-            client.setMarkedText(markedTextForDisplay(text), selectionRange: NSRange(location: text.utf16.count, length: 0), replacementRange: noRange)
+        inline.display(committed: committed, composing: session.marked, selection: client.selectedRange(),
+                       bufferWord: bufferWord) {
+            client.insertText($0, replacementRange: $1)
         }
     }
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
