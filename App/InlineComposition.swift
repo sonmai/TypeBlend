@@ -20,12 +20,15 @@ struct InlineComposition {
         return inlineClients.contains(bundleID.lowercased())
     }
 
-    func matches(_ selection: NSRange, read: (NSRange) -> String?) -> Bool {
-        guard !visible.isEmpty else { return true }
+    enum Status { case ready, moved, unavailable }
+
+    func status(_ selection: NSRange, read: (NSRange) -> String?) -> Status {
+        guard selection.location != NSNotFound else { return .unavailable }
+        guard !visible.isEmpty else { return .ready }
         let length = visible.utf16.count
-        guard selection == NSRange(location: start + length, length: 0),
-              let actual = read(NSRange(location: start, length: length)) else { return false }
-        return actual.utf16.elementsEqual(visible.utf16)
+        guard selection == NSRange(location: start + length, length: 0) else { return .moved }
+        guard let actual = read(NSRange(location: start, length: length)) else { return .unavailable }
+        return actual.utf16.elementsEqual(visible.utf16) ? .ready : .moved
     }
 
     mutating func display(committed: String, composing: String, selection: NSRange,
