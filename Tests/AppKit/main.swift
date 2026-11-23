@@ -49,7 +49,7 @@ func inlineUpdate(_ committed: String) {
         v.insertText($0, replacementRange: $1)
     }
     precondition(!v.hasMarkedText())
-    precondition(inline.matches(v.selectedRange()) { (v.string as NSString).substring(with: $0) })
+    precondition(inline.status(v.selectedRange()) { (v.string as NSString).substring(with: $0) } == .ready)
 }
 for c in "Guwir minhf file gif nhes. Banj vuwaf guwir minhf file gif vaayj?" {
     if c.isLetter { s.type(c); inlineUpdate("") }
@@ -62,8 +62,10 @@ precondition(s.toggle())
 inlineUpdate("")
 precondition(s.backspace())
 inlineUpdate("")
+precondition(inline.status(v.selectedRange()) { _ in nil } == .unavailable)
+precondition(InlineComposition().status(none) { _ in nil } == .unavailable)
 v.setSelectedRange(NSRange(location: 0, length: 0))
-precondition(!inline.matches(v.selectedRange()) { _ in nil })
+precondition(inline.status(v.selectedRange()) { _ in nil } == .moved)
 
 // Replace only our last committed word and separator, after a UTF-16 surrogate pair.
 s = Session(model, preferences: prefs)
