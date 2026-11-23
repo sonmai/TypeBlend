@@ -22,7 +22,23 @@ for c in "Zara" {
     brand.type(c)
     precondition(brand.marked == prefix)
 }
+for length in [32, 33, 40] {
+    let token = String(repeating: "b", count: length)
+    var session = Session(model, preferences: preferences)
+    for c in token { session.type(c) }
+    precondition(session.marked == token)
+    precondition(session.backspace() && session.marked == String(token.dropLast()))
+    session.type("b")
+    precondition(session.boundary(" ") == token + " ")
+}
+for newline in ["\n", "\r\n"] {
+    precondition(Ranker.entries("out of office" + newline + "proof of concept" + newline)
+                 == ["out of office", "proof of concept"])
+}
+precondition(model.englishPhrases.contains("out of office") && model.supported.contains("barns"))
 let cases = [
+    ("doesn't isn't won't", "doesn't isn't won't"),
+    ("doesn’t isn’t won’t", "doesn’t isn’t won’t"),
     ("mai minhf out of office.", "mai mình out of office."),
     ("guwir proof of concept nhes", "gửi proof of concept nhé"),
     ("zara", "zara"),
@@ -97,5 +113,26 @@ for c in "Tesar" { custom.type(c) }
 precondition(custom.pinCurrent())
 precondition(custom.finish() == "Tesar")
 precondition(TypingPreferences(defaults).literal("tesar"))
+// Measure the ranker with the annotated neighbouring words from the mixed corpus.
+let corpus = try String(contentsOfFile: "Tests/mixed-checks.txt", encoding: .utf8)
+var totals = [0, 0], errors = [0, 0]
+for row in corpus.split(whereSeparator: { $0.isNewline }) {
+    let fields = row.components(separatedBy: "|")
+    precondition(fields.count == 3)
+    let label = Int(fields[1])!
+    let words = fields[2].components(separatedBy: " ")
+    let index = words.firstIndex(of: "@")!
+    let raw = fields[0]
+    var engine = TelexEngine()
+    engine.liveSpellCheck = true
+    for key in raw { _ = engine.feed(key) }
+    let composed = engine.composed
+    let predicted = model.choose(raw: raw, composed: composed,
+                                 fallback: engine.peekCommitText(autoRestore: true),
+                                 left: Array(words.prefix(index)), next: words.dropFirst(index + 1).first ?? "")
+    totals[label] += 1
+    if predicted != (label == 1 ? raw : composed) { errors[label] += 1 }
+}
+print("Mixed corpus VI→EN errors", errors[0], "/", totals[0], "EN→VI errors", errors[1], "/", totals[1])
 defaults.removePersistentDomain(forName: suite)
 exit(failures == 0 ? 0 : 1)

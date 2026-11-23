@@ -11,21 +11,27 @@ class TypeBlendController: IMKInputController {
     private var recentCaret: NSRange?
     private var inline = InlineComposition()
 
+    private var bufferWord = false
+
     private func synchronize(_ client: IMKTextInput) {
-        if InlineComposition.enabled(in: client.bundleIdentifier()),
-           !inline.matches(client.selectedRange(), read: { client.attributedSubstring(from: $0)?.string }) {
-            inline = InlineComposition()
-            session = Session(model)
-        }
+        guard InlineComposition.enabled(in: client.bundleIdentifier()) else { return }
+        // A field may report a caret but consistently refuse text readback.
+        if bufferWord { return }
+        let status = inline.status(client.selectedRange()) { client.attributedSubstring(from: $0)?.string }
+        guard status != .ready else { return }
+        // Existing inline text is already in the document. Never replay it at a new caret.
+        inline = InlineComposition()
+        session = Session(model)
+        recentCaret = nil
+        bufferWord = status == .unavailable
     }
 
     private func display(_ client: IMKTextInput, committed: String = "") {
         if InlineComposition.enabled(in: client.bundleIdentifier()) {
-            let selection = client.selectedRange()
-            inline.display(committed: committed, composing: session.marked, selection: selection) {
+            inline.display(committed: committed, composing: session.marked, selection: client.selectedRange(),
+                           bufferWord: bufferWord) {
                 client.insertText($0, replacementRange: $1)
             }
-            if selection.location == NSNotFound { session = Session(model) }
             return
         }
         if !committed.isEmpty { client.insertText(committed, replacementRange: noRange) }
@@ -64,11 +70,11 @@ class TypeBlendController: IMKInputController {
             return true
         }
         guard let chars = event.characters, chars.count == 1, let c = chars.first,
-              c.isASCII, c.isLetter || c == " " || c.isNumber || c.isPunctuation else {
+              (c.isASCII || c == "’"), c.isLetter || c == " " || c.isNumber || c.isPunctuation else {
             commitComposition(sender)
             return false
         }
-        session.lookahead = !["com.apple.Terminal", "com.googlecode.iterm2", "com.microsoft.VSCode"].contains(client.bundleIdentifier() ?? "")
+        session.lookahead = !bufferWord && !["com.apple.Terminal", "com.googlecode.iterm2", "com.microsoft.VSCode"].contains(client.bundleIdentifier() ?? "")
         if c.isLetter { session.type(c); display(client) }
         else {
             let output = session.boundary(String(c))
@@ -86,7 +92,11 @@ class TypeBlendController: IMKInputController {
         session.forget()
         inline = InlineComposition()
     }
-    override func deactivateServer(_ sender: Any!) { commitComposition(sender); super.deactivateServer(sender) }
+    override func deactivateServer(_ sender: Any!) {
+        commitComposition(sender)
+        bufferWord = false
+        super.deactivateServer(sender)
+    }
 }
 
 if CommandLine.arguments.contains("--register") {

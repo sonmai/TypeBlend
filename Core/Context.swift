@@ -9,20 +9,24 @@ struct Ranker {
     let mode: Mode
     init(_ directory: URL, mode: Mode = .ngram) throws {
         self.mode = mode
-        englishPhrases = Set(try String(contentsOf: directory.appendingPathComponent("english-phrases.txt"),
-                                        encoding: .utf8).split(separator: "\n").map(String.init))
+        englishPhrases = Self.entries(try String(contentsOf: directory.appendingPathComponent("english-phrases.txt"),
+                                        encoding: .utf8))
         func bytes(_ file: String) throws -> Data {
             try Data(contentsOf: directory.appendingPathComponent(file), options: .mappedIfSafe)
         }
         seed = try JSONDecoder().decode(SeedRanker.self, from: bytes("model.json"))
         let words = try String(contentsOf: directory.appendingPathComponent("collisions.txt"), encoding: .utf8)
-        supported = mode == .seed ? seed.supported : Set(words.split(separator: "\n").map(String.init)).union(seed.supported)
+        supported = mode == .seed ? seed.supported : Self.entries(words).union(seed.supported)
         counts = mode == .seed || mode == .student ? Data() : try bytes("ng.bin")
         tags = counts.isEmpty ? Data() : try bytes("ng-tags.bin")
         guard tags.count == counts.count * 2 else { throw CocoaError(.fileReadCorruptFile) }
         learned = mode == .seed || mode == .ngram ? Data() : try bytes("student.bin")
         guard [counts, learned].allSatisfy({ $0.isEmpty || $0.count == 1 << 18 }) else { throw CocoaError(.fileReadCorruptFile) }
     }
+    static func entries(_ text: String) -> Set<String> {
+        Set(text.split(whereSeparator: { $0.isNewline }).map(String.init))
+    }
+
     func choose(raw: String, composed: String, fallback: String, left: [String], next: String) -> String {
         let word = raw.lowercased()
         guard raw != composed, raw != raw.uppercased(), supported.contains(word) else { return fallback }
