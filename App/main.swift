@@ -15,10 +15,10 @@ class TypeBlendController: IMKInputController {
 
     private func synchronize(_ client: IMKTextInput) {
         guard InlineComposition.enabled(in: client.bundleIdentifier()) else { return }
-        // Finish an invisible word through the same path even if the caret reappears.
-        if bufferWord && session.active { return }
+        // A field may report a caret but consistently refuse text readback.
+        if bufferWord { return }
         let status = inline.status(client.selectedRange()) { client.attributedSubstring(from: $0)?.string }
-        guard status != .ready else { bufferWord = false; return }
+        guard status != .ready else { return }
         // Existing inline text is already in the document. Never replay it at a new caret.
         inline = InlineComposition()
         session = Session(model)
@@ -28,12 +28,8 @@ class TypeBlendController: IMKInputController {
 
     private func display(_ client: IMKTextInput, committed: String = "") {
         if InlineComposition.enabled(in: client.bundleIdentifier()) {
-            if bufferWord {
-                if !committed.isEmpty { client.insertText(committed, replacementRange: noRange) }
-                return
-            }
-            let selection = client.selectedRange()
-            inline.display(committed: committed, composing: session.marked, selection: selection) {
+            inline.display(committed: committed, composing: session.marked, selection: client.selectedRange(),
+                           bufferWord: bufferWord) {
                 client.insertText($0, replacementRange: $1)
             }
             return
